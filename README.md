@@ -15,6 +15,10 @@
 - 靠近任務點才可完成任務
 - 任務完成紀錄存在瀏覽器本機
 
+## Google Maps API key
+
+目前部署版已內建一組前端 Google Maps JavaScript API key，方便 iPhone 直接開啟測試。這把 key 應限制在 GitHub Pages 網址與 Maps JavaScript API 使用。
+
 ## 本機開啟
 
 直接打開：

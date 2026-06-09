@@ -1,4 +1,5 @@
 const WANFANG = { lat: 24.99915, lng: 121.55878 };
+const DEFAULT_GOOGLE_MAPS_API_KEY = "AIzaSyA9-_B7kw9s8q547i35TSaYR9ygDPTOWgk";
 
 const quests = [
   {
@@ -533,9 +534,10 @@ els.trackButton.addEventListener("click", toggleTracking);
 els.simulateButton.addEventListener("click", simulateAtWanfang);
 
 const storedKey = localStorage.getItem("googleMapsApiKey");
-if (storedKey) {
-  els.apiKey.value = storedKey;
-  loadGoogleMaps(storedKey);
+const initialKey = storedKey || DEFAULT_GOOGLE_MAPS_API_KEY;
+if (initialKey) {
+  els.apiKey.value = initialKey;
+  loadGoogleMaps(initialKey);
 }
 
 renderMockMarkers();

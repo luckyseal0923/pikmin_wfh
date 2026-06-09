@@ -29,7 +29,7 @@ iPhone 不能直接打開 Windows 上的 `file:///C:/.../index.html`。
 ## iPhone 操作
 
 1. 用 Safari 開啟 HTTPS 網址
-2. 貼上 Google Maps API key 並載入地圖
+2. 地圖會自動使用部署版內建的 Google Maps API key
 3. 允許定位權限
 4. 按「持續追蹤」
 5. 開始走路測試角色移動、步數估算、任務觸發
