@@ -1,0 +1,569 @@
+:root {
+  color-scheme: light;
+  --ink: #26312b;
+  --muted: #647067;
+  --line: #d8e0d7;
+  --leaf: #3f8f66;
+  --leaf-dark: #276447;
+  --mint: #e8f5ee;
+  --sun: #f4b84f;
+  --blue: #4e8fc7;
+  --rose: #d96f64;
+  --paper: #fbfcf8;
+  --sky-map: #dff1fb;
+  --sky-road: #f7fbff;
+  --sky-line: #c3dceb;
+  --shadow: 0 16px 36px rgba(35, 49, 43, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #edf3ee;
+  color: var(--ink);
+  font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  min-height: 100vh;
+}
+
+.map-stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--sky-map);
+}
+
+.map,
+.mock-map {
+  position: absolute;
+  inset: 0;
+}
+
+.map {
+  z-index: 1;
+}
+
+.mock-map {
+  z-index: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.56) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,0.56) 1px, transparent 1px),
+    var(--sky-map);
+  background-size: 80px 80px;
+}
+
+.mock-road {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--sky-road);
+  box-shadow: inset 0 0 0 2px var(--sky-line);
+}
+
+.road-a {
+  width: 115%;
+  height: 48px;
+  left: -8%;
+  top: 46%;
+  transform: rotate(-13deg);
+}
+
+.road-b {
+  width: 52px;
+  height: 115%;
+  left: 52%;
+  top: -6%;
+  transform: rotate(18deg);
+}
+
+.road-c {
+  width: 78%;
+  height: 38px;
+  left: 12%;
+  top: 70%;
+  transform: rotate(7deg);
+}
+
+.mock-park,
+.mock-hospital,
+.mock-metro {
+  position: absolute;
+  border: 2px solid rgba(38, 49, 43, 0.14);
+}
+
+.mock-park {
+  width: 260px;
+  height: 180px;
+  left: 12%;
+  top: 16%;
+  border-radius: 30px;
+  background: #c9eadf;
+}
+
+.mock-hospital {
+  width: 210px;
+  height: 150px;
+  left: 50%;
+  top: 36%;
+  border-radius: 14px;
+  background: #f5fbff;
+}
+
+.mock-hospital::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--rose);
+  font-size: 72px;
+  font-weight: 800;
+}
+
+.mock-metro {
+  width: 110px;
+  height: 90px;
+  left: 35%;
+  top: 64%;
+  border-radius: 18px;
+  background: #bfe1f7;
+}
+
+.mock-marker {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  box-shadow: 0 8px 18px rgba(38,49,43,0.25);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+.mock-marker img {
+  width: 54px;
+  height: 54px;
+  display: block;
+}
+
+.top-bar {
+  position: absolute;
+  z-index: 5;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.top-bar h1,
+.side-panel h2,
+.quest-card h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.top-bar h1 {
+  font-size: clamp(32px, 5vw, 58px);
+  line-height: 0.95;
+  text-shadow: 0 2px 12px rgba(255,255,255,0.82);
+}
+
+.mobile-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(520px, calc(100vw - 100px));
+  margin-top: 10px;
+  pointer-events: auto;
+}
+
+.mobile-stats span {
+  border: 1px solid rgba(216, 224, 215, 0.86);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--leaf-dark);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(35, 49, 43, 0.1);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--leaf-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.icon-button {
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  color: var(--leaf-dark);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.key-panel {
+  position: absolute;
+  z-index: 6;
+  left: 24px;
+  bottom: 24px;
+  width: min(420px, calc(100% - 48px));
+  padding: 16px;
+  border: 1px solid rgba(216, 224, 215, 0.9);
+  border-radius: 8px;
+  background: rgba(251, 252, 248, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.key-panel label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--leaf-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.key-row {
+  display: flex;
+  gap: 8px;
+}
+
+.key-row input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.key-row button,
+.quest-card button {
+  border: 0;
+  border-radius: 6px;
+  background: var(--leaf);
+  color: white;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.key-panel p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pwa-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quest-card {
+  position: absolute;
+  z-index: 5;
+  right: 24px;
+  bottom: 24px;
+  width: min(360px, calc(100% - 48px));
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(251, 252, 248, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.quest-type {
+  margin: 0 0 8px;
+  color: var(--rose);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.quest-card h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.quest-card > p:not(.quest-type) {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.location-status {
+  border-left: 4px solid #a9d8f3;
+  background: #eef8fd;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.quest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.quest-meta span {
+  border-radius: 999px;
+  background: var(--mint);
+  color: var(--leaf-dark);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quest-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.quest-actions button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--leaf-dark);
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding: 28px 22px;
+  border-left: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.side-panel h2 {
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.progress-block {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.progress-block span {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--leaf-dark);
+}
+
+meter {
+  width: 100%;
+  height: 14px;
+}
+
+.quest-list {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.quest-item {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quest-item.is-active {
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(63, 143, 102, 0.14);
+}
+
+.quest-item.is-done {
+  background: #f4faf6;
+}
+
+.quest-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mint);
+  font-weight: 900;
+}
+
+.quest-item h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.quest-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.game-marker {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: var(--leaf);
+  color: white;
+  box-shadow: 0 8px 18px rgba(38,49,43,0.25);
+  font-weight: 900;
+}
+
+.game-marker[data-kind="hospital"] { background: var(--rose); }
+.game-marker[data-kind="metro"] { background: var(--blue); }
+.game-marker[data-kind="park"] { background: var(--leaf); }
+.game-marker[data-kind="pharmacy"] { background: var(--sun); color: #45320b; }
+.game-marker[data-kind="community"] { background: #6b7ec8; }
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .map-stage {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .side-panel {
+    max-height: 36vh;
+    overflow: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .quest-card {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .key-panel {
+    left: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
+  }
+}
+
+@media (max-width: 620px) {
+  body {
+    position: fixed;
+    width: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .map-stage {
+    min-height: 100dvh;
+  }
+
+  .top-bar {
+    top: calc(12px + env(safe-area-inset-top));
+    left: 16px;
+    right: 16px;
+  }
+
+  .top-bar h1 {
+    font-size: 38px;
+  }
+
+  .key-panel {
+    top: calc(104px + env(safe-area-inset-top));
+    bottom: auto;
+    padding: 12px;
+  }
+
+  .quest-card {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 48dvh;
+    overflow: auto;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .quest-card h2 {
+    font-size: 20px;
+  }
+
+  .quest-card > p:not(.quest-type) {
+    line-height: 1.45;
+    margin: 8px 0;
+  }
+
+  .quest-meta {
+    margin: 10px 0;
+  }
+
+  .side-panel {
+    display: none;
+  }
+
+  .key-row button,
+  .quest-card button,
+  .quest-actions button {
+    min-height: 44px;
+  }
+}

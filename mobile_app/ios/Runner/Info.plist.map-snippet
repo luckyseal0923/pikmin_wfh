@@ -1,0 +1,12 @@
+<!--
+After running `flutter create . --platforms ios`, add these entries to ios/Runner/Info.plist.
+
+Also set the Google Maps key in ios/Runner/AppDelegate.swift:
+
+GMSServices.provideAPIKey("YOUR_GOOGLE_MAPS_API_KEY")
+
+Required APIs:
+- Maps SDK for iOS
+-->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>用來在地圖上顯示你的健康探索位置，並判斷是否靠近任務點。</string>

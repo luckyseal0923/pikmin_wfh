@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#dff1fb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="健康探索隊">
+    <title>萬芳健康探索隊 Prototype</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-stage" aria-label="萬芳醫院周邊探索地圖">
+        <div id="map" class="map"></div>
+        <div id="mockMap" class="mock-map" aria-hidden="true">
+          <div class="mock-road road-a"></div>
+          <div class="mock-road road-b"></div>
+          <div class="mock-road road-c"></div>
+          <div class="mock-park"></div>
+          <div class="mock-hospital"></div>
+          <div class="mock-metro"></div>
+        </div>
+
+        <div class="top-bar">
+          <div>
+            <p class="eyebrow">萬芳醫院周邊</p>
+            <h1>健康探索隊</h1>
+            <div class="mobile-stats" aria-label="步行統計">
+              <span id="stepCount">0 步</span>
+              <span id="distanceCount">0 m</span>
+              <span id="nearestQuest">尚未定位</span>
+            </div>
+          </div>
+          <button id="locateButton" class="icon-button" type="button" title="定位到目前位置" aria-label="定位到目前位置">
+            ◎
+          </button>
+        </div>
+
+        <form id="keyForm" class="key-panel">
+          <label for="apiKey">Google Maps API key</label>
+          <div class="key-row">
+            <input id="apiKey" name="apiKey" type="password" autocomplete="off" placeholder="貼上 key 後載入真實地圖">
+            <button type="submit">載入</button>
+          </div>
+          <p>目前可先看任務與互動。填入 key 後會切換成 Google Maps 真實底圖。</p>
+        </form>
+
+        <aside class="quest-card" aria-live="polite">
+          <p id="questType" class="quest-type">任務點</p>
+          <h2 id="questTitle">萬芳醫院健康入口</h2>
+          <p id="questDescription">抵達醫院周邊後，查看今日門診、交通與樓層導引。</p>
+          <p id="locationStatus" class="location-status">尚未定位。iPhone 請用 Safari 開啟，允許定位後按「持續追蹤」。</p>
+          <div class="quest-meta">
+            <span id="questRadius">觸發 60m</span>
+            <span id="questReward">獎勵 醫療芽苗</span>
+            <span id="questDistance">距離未知</span>
+          </div>
+          <div class="quest-actions">
+            <button id="trackButton" type="button">持續追蹤</button>
+            <button id="simulateButton" type="button">模擬在萬芳</button>
+          </div>
+          <button id="completeButton" type="button">完成任務</button>
+        </aside>
+      </section>
+
+      <section class="side-panel" aria-label="探索任務列表">
+        <header>
+          <p class="eyebrow">今日路線</p>
+          <h2>從捷運站走進健康網絡</h2>
+          <p class="pwa-note">iPhone 測試時請用 Safari 開啟 HTTPS 網址，再加入主畫面。GPS 追蹤需保持畫面開啟。</p>
+        </header>
+
+        <div class="progress-block">
+          <div>
+            <span id="completedCount">0</span>
+            <small>/ 8 完成</small>
+          </div>
+          <meter id="progressMeter" min="0" max="8" value="0"></meter>
+        </div>
+
+        <div id="questList" class="quest-list"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

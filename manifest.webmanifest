@@ -1,0 +1,18 @@
+{
+  "name": "萬芳健康探索隊",
+  "short_name": "健康探索隊",
+  "description": "萬芳醫院周邊走路探索與健康任務 prototype。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#dff1fb",
+  "theme_color": "#dff1fb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
