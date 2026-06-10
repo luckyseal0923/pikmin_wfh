@@ -1,5 +1,6 @@
 const WANFANG = { lat: 24.99915, lng: 121.55878 };
 const DEFAULT_GOOGLE_MAPS_API_KEY = "AIzaSyA9-_B7kw9s8q547i35TSaYR9ygDPTOWgk";
+const MAP_LOAD_TIMEOUT_MS = 9000;
 
 const quests = [
   {
@@ -105,6 +106,9 @@ const state = {
   completed: new Set(JSON.parse(localStorage.getItem("completedQuests") || "[]")),
   walkedMeters: Number(localStorage.getItem("walkedMeters") || "0"),
   map: null,
+  mapLoaded: false,
+  mapLoadTimer: null,
+  mapsScriptLoading: false,
   markers: new Map(),
   userMarker: null,
   accuracyCircle: null,
@@ -120,6 +124,7 @@ const els = {
   completeButton: document.querySelector("#completeButton"),
   completedCount: document.querySelector("#completedCount"),
   keyForm: document.querySelector("#keyForm"),
+  keyStatus: document.querySelector("#keyStatus"),
   locateButton: document.querySelector("#locateButton"),
   locationStatus: document.querySelector("#locationStatus"),
   map: document.querySelector("#map"),
@@ -297,6 +302,11 @@ function userMarkerIcon() {
 }
 
 function initGoogleMap() {
+  state.mapLoaded = true;
+  state.mapsScriptLoading = false;
+  if (state.mapLoadTimer) window.clearTimeout(state.mapLoadTimer);
+  els.keyForm.classList.remove("is-error");
+  els.keyForm.classList.add("is-loaded");
   els.mockMap.style.display = "none";
   state.map = new google.maps.Map(els.map, {
     center: WANFANG,
@@ -338,6 +348,11 @@ function initGoogleMap() {
       fillOpacity: 0.08
     });
   });
+}
+
+function showMapStatus(message, isError = false) {
+  els.keyStatus.textContent = message;
+  els.keyForm.classList.toggle("is-error", isError);
 }
 
 function accuracyText(accuracy) {
@@ -444,15 +459,34 @@ function loadGoogleMaps(apiKey) {
     initGoogleMap();
     return;
   }
+  if (state.mapsScriptLoading) return;
 
   window.initWanfangMap = initGoogleMap;
+  window.gm_authFailure = () => {
+    state.mapsScriptLoading = false;
+    if (state.mapLoadTimer) window.clearTimeout(state.mapLoadTimer);
+    showMapStatus("Google Maps 拒絕這把 key。請確認已啟用 Maps JavaScript API、Billing，並允許 GitHub Pages 網址。", true);
+    els.mockMap.style.display = "block";
+  };
+  state.mapsScriptLoading = true;
+  showMapStatus("正在載入 Google Maps 真實地圖...");
+  state.mapLoadTimer = window.setTimeout(() => {
+    if (!state.mapLoaded) {
+      state.mapsScriptLoading = false;
+      showMapStatus("地圖載入逾時。請用 Safari 開啟，或確認 API key 的網域限制包含 GitHub Pages。", true);
+      els.mockMap.style.display = "block";
+    }
+  }, MAP_LOAD_TIMEOUT_MS);
+
   const script = document.createElement("script");
   script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=initWanfangMap&v=weekly`;
   script.async = true;
   script.defer = true;
   script.onerror = () => {
+    state.mapsScriptLoading = false;
+    if (state.mapLoadTimer) window.clearTimeout(state.mapLoadTimer);
     els.mockMap.style.display = "block";
-    alert("Google Maps 載入失敗，請確認 API key 與網路連線。");
+    showMapStatus("Google Maps 載入失敗。請確認網路、API key、或改用 Safari 開啟。", true);
   };
   document.head.appendChild(script);
 }

@@ -287,6 +287,19 @@ button:disabled {
   line-height: 1.5;
 }
 
+.key-panel.is-loaded {
+  display: none;
+}
+
+.key-panel.is-error {
+  border-color: rgba(217, 111, 100, 0.7);
+}
+
+.key-panel.is-error p {
+  color: #9a332c;
+  font-weight: 800;
+}
+
 .pwa-note {
   margin: 10px 0 0;
   color: var(--muted);
