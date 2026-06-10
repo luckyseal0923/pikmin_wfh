@@ -109,6 +109,11 @@ const state = {
   mapLoaded: false,
   mapLoadTimer: null,
   mapsScriptLoading: false,
+  supabaseClient: null,
+  supabaseUserId: null,
+  syncReady: false,
+  syncStatus: "本機保存",
+  syncTimer: null,
   markers: new Map(),
   userMarker: null,
   accuracyCircle: null,
@@ -146,6 +151,7 @@ const els = {
   simulateButton: document.querySelector("#simulateButton"),
   stepCount: document.querySelector("#stepCount"),
   distanceCount: document.querySelector("#distanceCount"),
+  syncStatus: document.querySelector("#syncStatus"),
   trackButton: document.querySelector("#trackButton")
 };
 
@@ -196,6 +202,7 @@ function renderProgress() {
   els.distanceCount.textContent = `${Math.round(state.walkedMeters)} m`;
   const nearest = nearestQuest();
   els.nearestQuest.textContent = nearest ? `最近：${nearest.quest.title} ${Math.round(nearest.distance)}m` : "尚未定位";
+  els.syncStatus.textContent = state.syncStatus;
 }
 
 function renderAll() {
@@ -234,10 +241,104 @@ function selectQuest(id, shouldPan) {
 
 function saveCompleted() {
   localStorage.setItem("completedQuests", JSON.stringify([...state.completed]));
+  queueCloudSync();
 }
 
 function saveWalkedMeters() {
   localStorage.setItem("walkedMeters", String(state.walkedMeters));
+  queueCloudSync();
+}
+
+function setSyncStatus(message) {
+  state.syncStatus = message;
+  if (els.syncStatus) els.syncStatus.textContent = message;
+}
+
+function statePayload() {
+  return {
+    user_id: state.supabaseUserId,
+    completed_quest_ids: [...state.completed],
+    walked_meters: state.walkedMeters,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function applyRemoteState(row) {
+  if (!row) return;
+  state.completed = new Set(row.completed_quest_ids || []);
+  state.walkedMeters = Number(row.walked_meters || 0);
+  localStorage.setItem("completedQuests", JSON.stringify([...state.completed]));
+  localStorage.setItem("walkedMeters", String(state.walkedMeters));
+  renderAll();
+}
+
+async function initSupabaseSync() {
+  const config = window.WANFANG_SUPABASE;
+  if (!config?.enabled || !config.url || !config.anonKey) {
+    setSyncStatus("本機保存");
+    return;
+  }
+  if (!window.supabase?.createClient) {
+    setSyncStatus("雲端未載入");
+    return;
+  }
+
+  try {
+    setSyncStatus("連線中");
+    state.supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+
+    let { data: sessionData } = await state.supabaseClient.auth.getSession();
+    if (!sessionData.session) {
+      const { data, error } = await state.supabaseClient.auth.signInAnonymously();
+      if (error) throw error;
+      sessionData = { session: data.session };
+    }
+
+    state.supabaseUserId = sessionData.session?.user?.id;
+    if (!state.supabaseUserId) throw new Error("Supabase anonymous user missing.");
+
+    const { data: remoteState, error: loadError } = await state.supabaseClient
+      .from("player_states")
+      .select("completed_quest_ids, walked_meters, updated_at")
+      .eq("user_id", state.supabaseUserId)
+      .maybeSingle();
+    if (loadError) throw loadError;
+
+    if (remoteState) {
+      applyRemoteState(remoteState);
+    } else {
+      await syncCloudState();
+    }
+
+    state.syncReady = true;
+    setSyncStatus("雲端同步");
+  } catch (error) {
+    console.warn("Supabase sync disabled:", error);
+    state.syncReady = false;
+    setSyncStatus("本機保存");
+  }
+}
+
+function queueCloudSync() {
+  if (!state.syncReady || !state.supabaseClient || !state.supabaseUserId) return;
+  window.clearTimeout(state.syncTimer);
+  state.syncTimer = window.setTimeout(syncCloudState, 500);
+}
+
+async function syncCloudState() {
+  if (!state.supabaseClient || !state.supabaseUserId) return;
+  try {
+    setSyncStatus("同步中");
+    const { error } = await state.supabaseClient
+      .from("player_states")
+      .upsert(statePayload(), { onConflict: "user_id" });
+    if (error) throw error;
+    state.syncReady = true;
+    setSyncStatus("雲端同步");
+  } catch (error) {
+    console.warn("Supabase sync failed:", error);
+    setSyncStatus("同步失敗");
+  }
 }
 
 function monsterSvg(quest, size = 68) {
@@ -597,3 +698,4 @@ if (initialKey) {
 renderMockMarkers();
 renderAll();
 setCardCollapsed(window.matchMedia("(max-width: 620px)").matches);
+initSupabaseSync();

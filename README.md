@@ -14,10 +14,19 @@
 - GPS 距離估算步數
 - 靠近任務點才可完成任務
 - 任務完成紀錄存在瀏覽器本機
+- 可選 Supabase 後端同步狀態
 
 ## Google Maps API key
 
 目前部署版已內建一組前端 Google Maps JavaScript API key，方便 iPhone 直接開啟測試。這把 key 應限制在 GitHub Pages 網址與 Maps JavaScript API 使用。
+
+## Supabase 後端
+
+Supabase 設定方式：
+
+[SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+
+尚未設定時，遊戲會使用瀏覽器本機保存；設定完成後會顯示「雲端同步」。
 
 ## 本機開啟
 
