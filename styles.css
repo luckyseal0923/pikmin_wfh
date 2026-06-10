@@ -351,11 +351,26 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+.card-toggle {
+  display: none;
+}
+
+.card-grip {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: #cbd8d2;
+}
+
 .quest-type {
   margin: 0 0 8px;
   color: var(--rose);
   font-size: 13px;
   font-weight: 800;
+}
+
+.quest-body {
+  display: block;
 }
 
 .quest-card h2 {
@@ -586,6 +601,44 @@ meter {
     overflow: auto;
     padding: 14px;
     border-radius: 14px;
+    transition: max-height 160ms ease, padding 160ms ease, transform 160ms ease;
+  }
+
+  .card-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 32px;
+    margin: -4px 0 6px;
+    border: 0;
+    background: transparent;
+    color: var(--leaf-dark);
+    padding: 0;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .quest-card.is-collapsed {
+    max-height: 104px;
+    overflow: hidden;
+    padding-bottom: 12px;
+  }
+
+  .quest-card.is-collapsed .quest-body {
+    display: none;
+  }
+
+  .quest-card.is-collapsed .quest-type {
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .quest-card.is-collapsed h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .quest-card h2 {

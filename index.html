@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="健康探索隊">
     <title>萬芳健康探索隊 Prototype</title>
-    <link rel="manifest" href="manifest.webmanifest?v=20260610-2">
+    <link rel="manifest" href="manifest.webmanifest?v=20260610-4">
     <link rel="apple-touch-icon" href="icon.svg">
-    <link rel="stylesheet" href="styles.css?v=20260610-2">
+    <link rel="stylesheet" href="styles.css?v=20260610-4">
   </head>
   <body>
     <main class="app-shell">
@@ -53,21 +53,27 @@
           <p id="keyStatus">部署版會自動載入 Google Maps。若沒有顯示地圖，請用 Safari 重新整理。</p>
         </form>
 
-        <aside class="quest-card" aria-live="polite">
+        <aside id="questCard" class="quest-card" aria-live="polite">
+          <button id="cardToggle" class="card-toggle" type="button" aria-expanded="true" aria-controls="questBody">
+            <span class="card-grip" aria-hidden="true"></span>
+            <span id="cardToggleText">收合任務卡</span>
+          </button>
           <p id="questType" class="quest-type">任務點</p>
           <h2 id="questTitle">萬芳醫院健康入口</h2>
-          <p id="questDescription">抵達醫院周邊後，查看今日門診、交通與樓層導引。</p>
-          <p id="locationStatus" class="location-status">尚未定位。iPhone 請用 Safari 開啟，允許定位後按「持續追蹤」。</p>
-          <div class="quest-meta">
-            <span id="questRadius">觸發 60m</span>
-            <span id="questReward">獎勵 醫療芽苗</span>
-            <span id="questDistance">距離未知</span>
+          <div id="questBody" class="quest-body">
+            <p id="questDescription">抵達醫院周邊後，查看今日門診、交通與樓層導引。</p>
+            <p id="locationStatus" class="location-status">尚未定位。iPhone 請用 Safari 開啟，允許定位後按「持續追蹤」。</p>
+            <div class="quest-meta">
+              <span id="questRadius">觸發 60m</span>
+              <span id="questReward">獎勵 醫療芽苗</span>
+              <span id="questDistance">距離未知</span>
+            </div>
+            <div class="quest-actions">
+              <button id="trackButton" type="button">持續追蹤</button>
+              <button id="simulateButton" type="button">模擬在萬芳</button>
+            </div>
+            <button id="completeButton" type="button">完成任務</button>
           </div>
-          <div class="quest-actions">
-            <button id="trackButton" type="button">持續追蹤</button>
-            <button id="simulateButton" type="button">模擬在萬芳</button>
-          </div>
-          <button id="completeButton" type="button">完成任務</button>
         </aside>
       </section>
 
@@ -90,6 +96,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-2"></script>
+    <script src="app.js?v=20260610-4"></script>
   </body>
 </html>

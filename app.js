@@ -126,6 +126,8 @@ const els = {
   keyForm: document.querySelector("#keyForm"),
   keyStatus: document.querySelector("#keyStatus"),
   mapError: document.querySelector("#mapError"),
+  cardToggle: document.querySelector("#cardToggle"),
+  cardToggleText: document.querySelector("#cardToggleText"),
   locateButton: document.querySelector("#locateButton"),
   locationStatus: document.querySelector("#locationStatus"),
   map: document.querySelector("#map"),
@@ -133,6 +135,8 @@ const els = {
   nearestQuest: document.querySelector("#nearestQuest"),
   progressMeter: document.querySelector("#progressMeter"),
   questDescription: document.querySelector("#questDescription"),
+  questBody: document.querySelector("#questBody"),
+  questCard: document.querySelector("#questCard"),
   questDistance: document.querySelector("#questDistance"),
   questList: document.querySelector("#questList"),
   questRadius: document.querySelector("#questRadius"),
@@ -144,6 +148,12 @@ const els = {
   distanceCount: document.querySelector("#distanceCount"),
   trackButton: document.querySelector("#trackButton")
 };
+
+function setCardCollapsed(collapsed) {
+  els.questCard.classList.toggle("is-collapsed", collapsed);
+  els.cardToggle.setAttribute("aria-expanded", String(!collapsed));
+  els.cardToggleText.textContent = collapsed ? "展開任務卡" : "收合任務卡";
+}
 
 function renderQuestList() {
   els.questList.innerHTML = "";
@@ -573,6 +583,9 @@ els.completeButton.addEventListener("click", () => {
 els.locateButton.addEventListener("click", locateUser);
 els.trackButton.addEventListener("click", toggleTracking);
 els.simulateButton.addEventListener("click", simulateAtWanfang);
+els.cardToggle.addEventListener("click", () => {
+  setCardCollapsed(!els.questCard.classList.contains("is-collapsed"));
+});
 
 const storedKey = localStorage.getItem("googleMapsApiKey");
 const initialKey = storedKey || DEFAULT_GOOGLE_MAPS_API_KEY;
@@ -583,3 +596,4 @@ if (initialKey) {
 
 renderMockMarkers();
 renderAll();
+setCardCollapsed(window.matchMedia("(max-width: 620px)").matches);
