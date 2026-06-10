@@ -170,6 +170,37 @@ button:disabled {
   display: block;
 }
 
+.map-error {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  top: 50%;
+  width: min(420px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(217, 111, 100, 0.72);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  text-align: center;
+}
+
+.map-error strong,
+.map-error span {
+  display: block;
+}
+
+.map-error strong {
+  color: #9a332c;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.map-error span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .top-bar {
   position: absolute;
   z-index: 5;

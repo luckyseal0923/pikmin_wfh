@@ -125,6 +125,7 @@ const els = {
   completedCount: document.querySelector("#completedCount"),
   keyForm: document.querySelector("#keyForm"),
   keyStatus: document.querySelector("#keyStatus"),
+  mapError: document.querySelector("#mapError"),
   locateButton: document.querySelector("#locateButton"),
   locationStatus: document.querySelector("#locationStatus"),
   map: document.querySelector("#map"),
@@ -307,6 +308,7 @@ function initGoogleMap() {
   if (state.mapLoadTimer) window.clearTimeout(state.mapLoadTimer);
   els.keyForm.classList.remove("is-error");
   els.keyForm.classList.add("is-loaded");
+  els.mapError.hidden = true;
   els.mockMap.style.display = "none";
   state.map = new google.maps.Map(els.map, {
     center: WANFANG,
@@ -353,6 +355,11 @@ function initGoogleMap() {
 function showMapStatus(message, isError = false) {
   els.keyStatus.textContent = message;
   els.keyForm.classList.toggle("is-error", isError);
+  if (isError) {
+    els.keyForm.classList.remove("is-loaded");
+    els.mapError.hidden = false;
+    els.mapError.querySelector("span").textContent = message;
+  }
 }
 
 function accuracyText(accuracy) {
@@ -465,7 +472,7 @@ function loadGoogleMaps(apiKey) {
   window.gm_authFailure = () => {
     state.mapsScriptLoading = false;
     if (state.mapLoadTimer) window.clearTimeout(state.mapLoadTimer);
-    showMapStatus("Google Maps 拒絕這把 key。請確認已啟用 Maps JavaScript API、Billing，並允許 GitHub Pages 網址。", true);
+    showMapStatus("Google Maps 拒絕這把 key。請確認 Billing 已啟用、Maps JavaScript API 已啟用，且 HTTP referrers 包含 https://luckyseal0923.github.io/pikmin_wfh/*。", true);
     els.mockMap.style.display = "block";
   };
   state.mapsScriptLoading = true;
