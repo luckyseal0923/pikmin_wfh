@@ -45,7 +45,22 @@
             ◎
           </button>
           <button id="followButton" class="icon-button follow-button is-active" type="button" title="鎖定跟隨位置" aria-label="鎖定跟隨位置" aria-pressed="true">◉</button>
+          <button id="teamButton" class="icon-button team-button" type="button" title="查看怪物隊伍" aria-label="查看怪物隊伍" aria-expanded="false">
+            <span class="team-button-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
         </div>
+
+        <section id="teamPanel" class="team-panel" aria-label="怪物隊伍" hidden>
+          <div class="team-panel-header">
+            <div>
+              <p class="eyebrow">我的夥伴</p>
+              <h2>探索隊伍 <span id="teamCount">0 / 3</span></h2>
+            </div>
+            <button id="closeTeamButton" class="close-button" type="button" aria-label="關閉隊伍">×</button>
+          </div>
+          <p id="collectionHint" class="collection-hint">完成任務後，就能收服該地點的怪物。</p>
+          <div id="collectionList" class="collection-list"></div>
+        </section>
 
         <form id="keyForm" class="key-panel">
           <label for="apiKey">Google Maps API key</label>
@@ -73,11 +88,16 @@
             </div>
             <div class="quest-actions">
               <button id="trackButton" type="button">開始即時導航</button>
-              <button id="simulateButton" type="button">模擬在萬芳</button>
+              <button id="simulateButton" type="button">模擬走一步</button>
             </div>
             <button id="completeButton" type="button">完成任務</button>
           </div>
         </aside>
+
+        <div id="captureToast" class="capture-toast" role="status" aria-live="polite" hidden>
+          <img id="captureToastImage" alt="">
+          <div><strong id="captureToastTitle"></strong><span id="captureToastText"></span></div>
+        </div>
       </section>
 
       <section class="side-panel" aria-label="探索任務列表">
@@ -101,6 +121,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260610-5"></script>
-    <script src="app.js?v=20260613-1"></script>
+    <script src="app.js?v=20260613-2"></script>
   </body>
 </html>

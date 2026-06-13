@@ -1,9 +1,17 @@
 create table if not exists public.player_states (
   user_id uuid primary key references auth.users(id) on delete cascade,
   completed_quest_ids text[] not null default '{}',
+  collected_monster_ids text[] not null default '{}',
+  active_team_ids text[] not null default '{}',
   walked_meters double precision not null default 0,
   updated_at timestamptz not null default now()
 );
+
+alter table public.player_states
+  add column if not exists collected_monster_ids text[] not null default '{}';
+
+alter table public.player_states
+  add column if not exists active_team_ids text[] not null default '{}';
 
 alter table public.player_states enable row level security;
 

@@ -101,9 +101,19 @@ const quests = [
   }
 ];
 
+const storedCompleted = new Set(JSON.parse(localStorage.getItem("completedQuests") || "[]"));
+const storedCollected = new Set(JSON.parse(localStorage.getItem("collectedMonsters") || "[]"));
+storedCompleted.forEach((id) => storedCollected.add(id));
+const storedTeam = JSON.parse(localStorage.getItem("activeMonsterTeam") || "[]")
+  .filter((id) => storedCollected.has(id))
+  .slice(0, 3);
+if (!storedTeam.length) storedTeam.push(...[...storedCollected].slice(0, 3));
+
 const state = {
   selectedId: quests[0].id,
-  completed: new Set(JSON.parse(localStorage.getItem("completedQuests") || "[]")),
+  completed: storedCompleted,
+  collected: storedCollected,
+  activeTeam: storedTeam,
   walkedMeters: Number(localStorage.getItem("walkedMeters") || "0"),
   map: null,
   mapLoaded: false,
@@ -112,12 +122,18 @@ const state = {
   supabaseClient: null,
   supabaseUserId: null,
   syncReady: false,
+  supportsCollectionSync: true,
   syncStatus: "本機保存",
   syncTimer: null,
+  captureTimer: null,
   markers: new Map(),
   userMarker: null,
+  followerMarkers: new Map(),
   displayedPosition: null,
   markerAnimationFrame: null,
+  lastPositionTimestamp: null,
+  visualTrail: [],
+  lastVisualTrailAt: 0,
   heading: 0,
   speedMetersPerSecond: 0,
   followMode: true,
@@ -127,6 +143,7 @@ const state = {
   userTrail: [],
   lastPosition: null,
   lastAccuracy: null,
+  simulationIndex: 0,
   watchId: null
 };
 
@@ -160,13 +177,96 @@ const els = {
   stepCount: document.querySelector("#stepCount"),
   distanceCount: document.querySelector("#distanceCount"),
   syncStatus: document.querySelector("#syncStatus"),
-  trackButton: document.querySelector("#trackButton")
+  trackButton: document.querySelector("#trackButton"),
+  teamButton: document.querySelector("#teamButton"),
+  teamPanel: document.querySelector("#teamPanel"),
+  teamCount: document.querySelector("#teamCount"),
+  closeTeamButton: document.querySelector("#closeTeamButton"),
+  collectionHint: document.querySelector("#collectionHint"),
+  collectionList: document.querySelector("#collectionList"),
+  captureToast: document.querySelector("#captureToast"),
+  captureToastImage: document.querySelector("#captureToastImage"),
+  captureToastTitle: document.querySelector("#captureToastTitle"),
+  captureToastText: document.querySelector("#captureToastText")
 };
 
 function setCardCollapsed(collapsed) {
   els.questCard.classList.toggle("is-collapsed", collapsed);
   els.cardToggle.setAttribute("aria-expanded", String(!collapsed));
   els.cardToggleText.textContent = collapsed ? "展開任務卡" : "收合任務卡";
+}
+
+function setTeamPanel(open) {
+  els.teamPanel.hidden = !open;
+  els.teamButton.setAttribute("aria-expanded", String(open));
+  els.teamButton.classList.toggle("is-active", open);
+}
+
+function saveMonsterProgress() {
+  localStorage.setItem("collectedMonsters", JSON.stringify([...state.collected]));
+  localStorage.setItem("activeMonsterTeam", JSON.stringify(state.activeTeam));
+  queueCloudSync();
+}
+
+function showCaptureToast(quest, joinedTeam) {
+  window.clearTimeout(state.captureTimer);
+  els.captureToastImage.src = monsterDataUrl(quest);
+  els.captureToastImage.alt = quest.title;
+  els.captureToastTitle.textContent = `收服 ${quest.title}！`;
+  els.captureToastText.textContent = joinedTeam ? "已自動加入探索隊伍" : "已加入怪物圖鑑";
+  els.captureToast.hidden = false;
+  requestAnimationFrame(() => els.captureToast.classList.add("is-visible"));
+  state.captureTimer = window.setTimeout(() => {
+    els.captureToast.classList.remove("is-visible");
+    window.setTimeout(() => { els.captureToast.hidden = true; }, 180);
+  }, 3200);
+}
+
+function toggleTeamMember(id) {
+  const index = state.activeTeam.indexOf(id);
+  if (index >= 0) {
+    state.activeTeam.splice(index, 1);
+  } else if (state.activeTeam.length < 3) {
+    state.activeTeam.push(id);
+  } else {
+    els.collectionHint.textContent = "隊伍最多 3 隻，先讓一隻休息再加入。";
+    return;
+  }
+  saveMonsterProgress();
+  renderCollection();
+  syncFollowerMarkers();
+}
+
+function renderCollection() {
+  els.teamCount.textContent = `${state.activeTeam.length} / 3`;
+  els.collectionList.innerHTML = "";
+  const collectedQuests = quests.filter((quest) => state.collected.has(quest.id));
+  els.collectionHint.textContent = collectedQuests.length
+    ? "點一下怪物即可加入或退出隊伍，隊伍最多 3 隻。"
+    : "完成任務後，就能收服該地點的怪物。";
+
+  if (!collectedQuests.length) {
+    const empty = document.createElement("p");
+    empty.className = "collection-empty";
+    empty.textContent = "還沒有夥伴，先去完成第一個任務吧。";
+    els.collectionList.appendChild(empty);
+    return;
+  }
+
+  collectedQuests.forEach((quest) => {
+    const active = state.activeTeam.includes(quest.id);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "collection-item";
+    button.classList.toggle("is-active", active);
+    button.innerHTML = `
+      <img src="${monsterDataUrl(quest)}" alt="">
+      <span><strong>${quest.title}</strong><small>${active ? "隊伍中" : "點擊加入"}</small></span>
+      <b aria-hidden="true">${active ? "✓" : "+"}</b>
+    `;
+    button.addEventListener("click", () => toggleTeamMember(quest.id));
+    els.collectionList.appendChild(button);
+  });
 }
 
 function renderQuestList() {
@@ -269,21 +369,36 @@ function setSyncStatus(message) {
 }
 
 function statePayload() {
-  return {
+  const payload = {
     user_id: state.supabaseUserId,
     completed_quest_ids: [...state.completed],
     walked_meters: state.walkedMeters,
     updated_at: new Date().toISOString()
   };
+  if (state.supportsCollectionSync) {
+    payload.collected_monster_ids = [...state.collected];
+    payload.active_team_ids = state.activeTeam;
+  }
+  return payload;
 }
 
 function applyRemoteState(row) {
   if (!row) return;
   state.completed = new Set(row.completed_quest_ids || []);
+  const remoteCollected = row.collected_monster_ids || row.completed_quest_ids || [];
+  state.collected = new Set(remoteCollected);
+  state.completed.forEach((id) => state.collected.add(id));
+  state.activeTeam = (row.active_team_ids || state.activeTeam)
+    .filter((id) => state.collected.has(id))
+    .slice(0, 3);
   state.walkedMeters = Number(row.walked_meters || 0);
   localStorage.setItem("completedQuests", JSON.stringify([...state.completed]));
   localStorage.setItem("walkedMeters", String(state.walkedMeters));
+  localStorage.setItem("collectedMonsters", JSON.stringify([...state.collected]));
+  localStorage.setItem("activeMonsterTeam", JSON.stringify(state.activeTeam));
   renderAll();
+  renderCollection();
+  syncFollowerMarkers();
 }
 
 async function initSupabaseSync() {
@@ -311,11 +426,19 @@ async function initSupabaseSync() {
     state.supabaseUserId = sessionData.session?.user?.id;
     if (!state.supabaseUserId) throw new Error("Supabase anonymous user missing.");
 
-    const { data: remoteState, error: loadError } = await state.supabaseClient
+    let { data: remoteState, error: loadError } = await state.supabaseClient
       .from("player_states")
-      .select("completed_quest_ids, walked_meters, updated_at")
+      .select("completed_quest_ids, collected_monster_ids, active_team_ids, walked_meters, updated_at")
       .eq("user_id", state.supabaseUserId)
       .maybeSingle();
+    if (loadError && (loadError.code === "42703" || loadError.code === "PGRST204")) {
+      state.supportsCollectionSync = false;
+      ({ data: remoteState, error: loadError } = await state.supabaseClient
+        .from("player_states")
+        .select("completed_quest_ids, walked_meters, updated_at")
+        .eq("user_id", state.supabaseUserId)
+        .maybeSingle());
+    }
     if (loadError) throw loadError;
 
     if (remoteState) {
@@ -325,11 +448,13 @@ async function initSupabaseSync() {
     }
 
     state.syncReady = true;
-    setSyncStatus("雲端同步");
+    setSyncStatus(state.supportsCollectionSync ? "雲端同步" : "雲端待升級");
   } catch (error) {
     console.warn("Supabase sync disabled:", error);
     state.syncReady = false;
-    setSyncStatus("本機保存");
+    setSyncStatus(error?.message?.includes("Anonymous sign-ins are disabled")
+      ? "請開啟匿名登入"
+      : "本機保存");
   }
 }
 
@@ -343,12 +468,18 @@ async function syncCloudState() {
   if (!state.supabaseClient || !state.supabaseUserId) return;
   try {
     setSyncStatus("同步中");
-    const { error } = await state.supabaseClient
+    let { error } = await state.supabaseClient
       .from("player_states")
       .upsert(statePayload(), { onConflict: "user_id" });
+    if (error && state.supportsCollectionSync && (error.code === "42703" || error.code === "PGRST204")) {
+      state.supportsCollectionSync = false;
+      ({ error } = await state.supabaseClient
+        .from("player_states")
+        .upsert(statePayload(), { onConflict: "user_id" }));
+    }
     if (error) throw error;
     state.syncReady = true;
-    setSyncStatus("雲端同步");
+    setSyncStatus(state.supportsCollectionSync ? "雲端同步" : "雲端待升級");
   } catch (error) {
     console.warn("Supabase sync failed:", error);
     setSyncStatus("同步失敗");
@@ -402,6 +533,51 @@ function markerIcon(quest) {
     scaledSize: new google.maps.Size(54, 54),
     anchor: new google.maps.Point(27, 48)
   };
+}
+
+function followerMarkerIcon(quest) {
+  const svg = monsterSvg(quest, 52);
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 34)
+  };
+}
+
+function syncFollowerMarkers() {
+  if (!state.map || !window.google?.maps) return;
+  for (const [id, marker] of state.followerMarkers) {
+    if (!state.activeTeam.includes(id)) {
+      marker.setMap(null);
+      state.followerMarkers.delete(id);
+    }
+  }
+  const currentPosition = state.displayedPosition || state.lastPosition;
+  if (!currentPosition) return;
+  state.activeTeam.forEach((id) => {
+    if (state.followerMarkers.has(id)) return;
+    const quest = quests.find((item) => item.id === id);
+    if (!quest) return;
+    state.followerMarkers.set(id, new google.maps.Marker({
+      map: state.map,
+      position: currentPosition,
+      icon: followerMarkerIcon(quest),
+      title: `${quest.title}・隊伍夥伴`,
+      clickable: false,
+      zIndex: 20
+    }));
+  });
+  updateFollowerPositions(state.displayedPosition || state.lastPosition);
+}
+
+function updateFollowerPositions(fallbackPosition) {
+  if (!fallbackPosition) return;
+  state.activeTeam.forEach((id, index) => {
+    const marker = state.followerMarkers.get(id);
+    if (!marker) return;
+    const trailIndex = Math.max(0, state.visualTrail.length - 1 - ((index + 1) * 12));
+    marker.setPosition(state.visualTrail[trailIndex] || fallbackPosition);
+  });
 }
 
 function userMarkerIcon(heading = 0) {
@@ -480,6 +656,7 @@ function initGoogleMap() {
       fillOpacity: 0.08
     });
   });
+  syncFollowerMarkers();
 }
 
 function setFollowMode(enabled) {
@@ -494,11 +671,10 @@ function setFollowMode(enabled) {
   renderProgress();
 }
 
-function animateUserMarker(target, heading) {
+function animateUserMarker(target, heading, duration = 1200) {
   if (!state.userMarker) return;
   const start = state.displayedPosition || target;
   const startedAt = performance.now();
-  const duration = 700;
   if (state.markerAnimationFrame) cancelAnimationFrame(state.markerAnimationFrame);
 
   const frame = (now) => {
@@ -510,6 +686,12 @@ function animateUserMarker(target, heading) {
     };
     state.displayedPosition = current;
     state.userMarker.setPosition(current);
+    if (now - state.lastVisualTrailAt >= 100) {
+      state.visualTrail.push(current);
+      if (state.visualTrail.length > 180) state.visualTrail.shift();
+      state.lastVisualTrailAt = now;
+    }
+    updateFollowerPositions(current);
     if (state.followMode && state.map) state.map.panTo(current);
     if (rawProgress < 1) state.markerAnimationFrame = requestAnimationFrame(frame);
   };
@@ -550,16 +732,46 @@ function accuracyText(accuracy) {
   return `定位精準度約 ${Math.round(accuracy)}m，這多半是 Wi-Fi/IP 估算，位置可能偏很多。`;
 }
 
-function updateUserPosition(coords, accuracy) {
+function bearingBetween(a, b) {
+  const toRad = (degrees) => degrees * Math.PI / 180;
+  const toDeg = (radians) => radians * 180 / Math.PI;
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function updateUserPosition(coords, accuracy, timestamp = Date.now()) {
   const previous = state.lastPosition;
+  const previousTimestamp = state.lastPositionTimestamp;
+  const elapsedSeconds = previousTimestamp ? Math.max(0.1, (timestamp - previousTimestamp) / 1000) : 0;
+  const delta = previous ? distanceBetween(previous, coords) : 0;
+
+  const poorFix = Number.isFinite(accuracy) && accuracy > 120;
+  const implausibleJump = previous && elapsedSeconds > 0 && delta > Math.max(120, elapsedSeconds * 15);
+  if (previous && ((poorFix && state.lastAccuracy <= 80) || implausibleJump)) {
+    els.locationStatus.textContent = `略過一筆飄移定位（精準度約 ${Math.round(accuracy || 0)}m），繼續追蹤中。`;
+    return;
+  }
+
   state.lastPosition = coords;
+  state.lastPositionTimestamp = timestamp;
   state.lastAccuracy = accuracy;
 
   if (previous && Number.isFinite(accuracy) && accuracy <= 80) {
-    const delta = distanceBetween(previous, coords);
     if (delta >= 2 && delta <= 80) {
       state.walkedMeters += delta;
       saveWalkedMeters();
+    }
+  }
+
+  if (previous && delta >= 2) {
+    state.heading = bearingBetween(previous, coords);
+    if (!state.speedMetersPerSecond && elapsedSeconds > 0) {
+      state.speedMetersPerSecond = delta / elapsedSeconds;
     }
   }
 
@@ -577,8 +789,14 @@ function updateUserPosition(coords, accuracy) {
       icon: userMarkerIcon(state.heading),
       title: "目前位置"
     });
+    state.displayedPosition = coords;
+    state.visualTrail.push(coords);
   }
-  animateUserMarker(coords, state.heading);
+  const animationDuration = elapsedSeconds
+    ? Math.min(10000, Math.max(900, elapsedSeconds * 980))
+    : 900;
+  animateUserMarker(coords, state.heading, animationDuration);
+  syncFollowerMarkers();
 
   state.userTrail.push(coords);
   if (state.userTrail.length > 120) state.userTrail.shift();
@@ -665,7 +883,7 @@ function loadGoogleMaps(apiKey) {
   }, MAP_LOAD_TIMEOUT_MS);
 
   const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=initWanfangMap&v=weekly`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=initWanfangMap&loading=async&v=weekly`;
   script.async = true;
   script.defer = true;
   script.onerror = () => {
@@ -688,7 +906,7 @@ function locateUser() {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       };
-      updateUserPosition(coords, position.coords.accuracy);
+      updateUserPosition(coords, position.coords.accuracy, position.timestamp);
       setFollowMode(true);
     },
     () => alert("無法取得定位，請確認瀏覽器定位權限。"),
@@ -719,7 +937,8 @@ function toggleTracking() {
         : 0;
       updateUserPosition(
         { lat: position.coords.latitude, lng: position.coords.longitude },
-        position.coords.accuracy
+        position.coords.accuracy,
+        position.timestamp
       );
     },
     () => {
@@ -740,7 +959,17 @@ function toggleTracking() {
 }
 
 function simulateAtWanfang() {
-  updateUserPosition(WANFANG, 15);
+  const route = [
+    WANFANG,
+    { lat: WANFANG.lat + 0.00003, lng: WANFANG.lng + 0.00002 },
+    { lat: WANFANG.lat + 0.00006, lng: WANFANG.lng + 0.00004 },
+    { lat: WANFANG.lat + 0.00009, lng: WANFANG.lng + 0.00003 },
+    { lat: WANFANG.lat + 0.00012, lng: WANFANG.lng + 0.00001 }
+  ];
+  const point = route[state.simulationIndex % route.length];
+  state.simulationIndex += 1;
+  updateUserPosition(point, 8, Date.now());
+  setFollowMode(true);
 }
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
@@ -757,6 +986,18 @@ els.completeButton.addEventListener("click", () => {
     state.completed.delete(state.selectedId);
   } else {
     state.completed.add(state.selectedId);
+    const quest = quests.find((item) => item.id === state.selectedId);
+    const isNewCapture = !state.collected.has(state.selectedId);
+    let joinedTeam = false;
+    state.collected.add(state.selectedId);
+    if (isNewCapture && state.activeTeam.length < 3) {
+      state.activeTeam.push(state.selectedId);
+      joinedTeam = true;
+    }
+    saveMonsterProgress();
+    renderCollection();
+    syncFollowerMarkers();
+    if (quest && isNewCapture) showCaptureToast(quest, joinedTeam);
   }
   saveCompleted();
   renderAll();
@@ -764,6 +1005,8 @@ els.completeButton.addEventListener("click", () => {
 
 els.locateButton.addEventListener("click", locateUser);
 els.followButton.addEventListener("click", () => setFollowMode(true));
+els.teamButton.addEventListener("click", () => setTeamPanel(els.teamPanel.hidden));
+els.closeTeamButton.addEventListener("click", () => setTeamPanel(false));
 els.trackButton.addEventListener("click", toggleTracking);
 els.simulateButton.addEventListener("click", simulateAtWanfang);
 els.cardToggle.addEventListener("click", () => {
@@ -785,5 +1028,6 @@ if (initialKey) {
 
 renderMockMarkers();
 renderAll();
+renderCollection();
 setCardCollapsed(window.matchMedia("(max-width: 620px)").matches);
 initSupabaseSync();

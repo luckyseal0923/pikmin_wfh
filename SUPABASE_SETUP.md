@@ -1,5 +1,14 @@
 # Supabase 設定
 
+## 這次需要更新的欄位
+
+重新到 Supabase SQL Editor 執行 `supabase/schema.sql`。SQL 使用 `add column if not exists`，可安全補上：
+
+- `collected_monster_ids`：已收服怪物
+- `active_team_ids`：目前隨行隊伍
+
+並請在 Authentication > Providers > Anonymous 開啟匿名登入，否則網頁只能保存在本機。
+
 這個 prototype 會用 Supabase 儲存：
 
 - 已完成任務：`completed_quest_ids`
