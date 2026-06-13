@@ -644,28 +644,10 @@ function updateFollowerPositions(fallbackPosition) {
 }
 
 function userMarkerIcon(heading = 0) {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="76" height="76" viewBox="0 0 76 76">
-      <g transform="rotate(${Number.isFinite(heading) ? heading : 0} 38 38)">
-      <ellipse cx="38" cy="68" rx="18" ry="5" fill="#26312b" opacity=".18"/>
-      <path d="M38 10c-6 0-11 4-14 10" fill="none" stroke="#2f4b42" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="24" cy="20" r="5" fill="#f6cf57" stroke="#fff" stroke-width="2"/>
-      <path d="M15 39c0-17 12-27 27-25 12 2 22 12 22 27 0 18-13 29-31 28-13-1-18-11-18-30z" fill="#2f7bb2" stroke="#fff" stroke-width="5"/>
-      <circle cx="31" cy="38" r="6" fill="#fff"/>
-      <circle cx="50" cy="38" r="6" fill="#fff"/>
-      <circle cx="33" cy="40" r="2.5" fill="#26312b"/>
-      <circle cx="48" cy="40" r="2.5" fill="#26312b"/>
-      <path d="M36 51c4 3 9 3 13 0" fill="none" stroke="#26312b" stroke-width="3.5" stroke-linecap="round"/>
-      <path d="M21 59c-6 3-9 7-11 12" fill="none" stroke="#2f7bb2" stroke-width="5" stroke-linecap="round"/>
-      <path d="M55 59c6 3 9 7 11 12" fill="none" stroke="#2f7bb2" stroke-width="5" stroke-linecap="round"/>
-      <path d="M38 2l-7 12h14z" fill="#f4b84f" stroke="#fff" stroke-width="2"/>
-      </g>
-    </svg>
-  `;
   return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new google.maps.Size(58, 58),
-    anchor: new google.maps.Point(29, 52)
+    url: new URL("assets/character/nurse-walk-cycle.webp", window.location.href).href,
+    scaledSize: new google.maps.Size(76, 76),
+    anchor: new google.maps.Point(38, 70)
   };
 }
 
@@ -864,7 +846,9 @@ function updateUserPosition(coords, accuracy, timestamp = Date.now()) {
       map: state.map,
       position: coords,
       icon: userMarkerIcon(state.heading),
-      title: "目前位置"
+      title: "目前位置",
+      optimized: false,
+      zIndex: 30
     });
     state.displayedPosition = coords;
     state.visualTrail.push(coords);

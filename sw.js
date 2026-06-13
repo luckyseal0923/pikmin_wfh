@@ -1,4 +1,4 @@
-const CACHE_NAME = "wanfang-health-explorer-v9";
+const CACHE_NAME = "wanfang-health-explorer-v10";
 const LOCAL_ASSETS = [
   "./",
   "./index.html",
@@ -6,7 +6,9 @@ const LOCAL_ASSETS = [
   "./app.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.svg",
+  "./assets/character/nurse-map-avatar.png",
+  "./assets/character/nurse-walk-cycle.webp"
 ];
 
 self.addEventListener("install", (event) => {
