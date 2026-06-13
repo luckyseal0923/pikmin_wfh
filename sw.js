@@ -1,9 +1,10 @@
-const CACHE_NAME = "wanfang-health-explorer-v10";
+const CACHE_NAME = "wanfang-health-explorer-v11";
 const LOCAL_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./character3d.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
   "./icon.svg",

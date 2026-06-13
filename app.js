@@ -188,6 +188,8 @@ const state = {
   captureTimer: null,
   markers: new Map(),
   userMarker: null,
+  user3DCharacter: null,
+  user3DLoading: false,
   followerMarkers: new Map(),
   displayedPosition: null,
   markerAnimationFrame: null,
@@ -724,7 +726,7 @@ function setFollowMode(enabled) {
 }
 
 function animateUserMarker(target, heading, duration = 1200) {
-  if (!state.userMarker) return;
+  if (!state.userMarker && !state.user3DCharacter) return;
   const start = state.displayedPosition || target;
   const startedAt = performance.now();
   if (state.markerAnimationFrame) cancelAnimationFrame(state.markerAnimationFrame);
@@ -737,7 +739,8 @@ function animateUserMarker(target, heading, duration = 1200) {
       lng: start.lng + (target.lng - start.lng) * progress
     };
     state.displayedPosition = current;
-    state.userMarker.setPosition(current);
+    if (state.userMarker) state.userMarker.setPosition(current);
+    if (state.user3DCharacter) state.user3DCharacter.setPosition(current);
     if (now - state.lastVisualTrailAt >= 100) {
       state.visualTrail.push(current);
       if (state.visualTrail.length > 180) state.visualTrail.shift();
@@ -748,8 +751,27 @@ function animateUserMarker(target, heading, duration = 1200) {
     if (rawProgress < 1) state.markerAnimationFrame = requestAnimationFrame(frame);
   };
 
-  state.userMarker.setIcon(userMarkerIcon(heading));
+  if (state.userMarker) state.userMarker.setIcon(userMarkerIcon(heading));
+  if (state.user3DCharacter) state.user3DCharacter.setHeading(heading);
   state.markerAnimationFrame = requestAnimationFrame(frame);
+}
+
+async function ensure3DCharacter(position) {
+  if (state.user3DCharacter || state.user3DLoading || !state.map) return;
+  state.user3DLoading = true;
+  try {
+    const characterApi = await window.WANFANG_3D_READY;
+    const character = characterApi.create(state.map, position);
+    await character.ready;
+    character.setPosition(state.displayedPosition || state.lastPosition || position);
+    character.setHeading(state.heading);
+    state.user3DCharacter = character;
+    if (state.userMarker) state.userMarker.setVisible(false);
+  } catch (error) {
+    console.warn("3D walking character unavailable; using image fallback.", error);
+  } finally {
+    state.user3DLoading = false;
+  }
 }
 
 async function requestWakeLock() {
@@ -853,6 +875,7 @@ function updateUserPosition(coords, accuracy, timestamp = Date.now()) {
     state.displayedPosition = coords;
     state.visualTrail.push(coords);
   }
+  ensure3DCharacter(coords);
   const animationDuration = elapsedSeconds
     ? Math.min(10000, Math.max(900, elapsedSeconds * 980))
     : 900;
