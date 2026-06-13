@@ -146,6 +146,18 @@ const quests = [
     radius: 90,
     reward: "營養夥伴",
     description: "走到校園東側附近，完成健康餐盤測試並收服餐盤怪。"
+  },
+  {
+    id: "tmu-teaching-building-scout",
+    title: "教學大樓探路怪",
+    type: "北醫測試任務",
+    kind: "pharmacy",
+    icon: "探",
+    lat: 25.02535,
+    lng: 121.56172,
+    radius: 100,
+    reward: "探路夥伴",
+    description: "在教學大樓與醫技系大樓附近出現，測試截圖位置的靠近、收服與跟隨功能。"
   }
 ];
 

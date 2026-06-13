@@ -1,4 +1,4 @@
-const CACHE_NAME = "wanfang-health-explorer-v8";
+const CACHE_NAME = "wanfang-health-explorer-v9";
 const LOCAL_ASSETS = [
   "./",
   "./index.html",
