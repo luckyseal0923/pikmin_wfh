@@ -657,6 +657,13 @@ function initGoogleMap() {
     });
   });
   syncFollowerMarkers();
+  if (state.lastPosition) {
+    updateUserPosition(
+      state.lastPosition,
+      state.lastAccuracy,
+      state.lastPositionTimestamp || Date.now()
+    );
+  }
 }
 
 function setFollowMode(enabled) {
@@ -914,19 +921,24 @@ function locateUser() {
   );
 }
 
-function toggleTracking() {
+function stopTracking() {
+  if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId);
+  state.watchId = null;
+  els.trackButton.textContent = "開始即時導航";
+  releaseWakeLock();
+  renderProgress();
+}
+
+function startTracking(automatic = false) {
   if (!navigator.geolocation) {
-    alert("這個瀏覽器不支援定位。");
+    els.locationStatus.textContent = "這個瀏覽器不支援定位。";
+    if (!automatic) alert("這個瀏覽器不支援定位。");
     return;
   }
-  if (state.watchId !== null) {
-    navigator.geolocation.clearWatch(state.watchId);
-    state.watchId = null;
-    els.trackButton.textContent = "開始即時導航";
-    releaseWakeLock();
-    renderProgress();
-    return;
-  }
+  if (state.watchId !== null) return;
+  els.locationStatus.textContent = automatic
+    ? "正在自動取得目前位置，首次使用請允許精確定位。"
+    : "正在取得目前位置。";
   state.watchId = navigator.geolocation.watchPosition(
     (position) => {
       if (Number.isFinite(position.coords.heading) && position.coords.heading >= 0) {
@@ -941,14 +953,13 @@ function toggleTracking() {
         position.timestamp
       );
     },
-    () => {
-      alert("無法持續追蹤定位，請確認瀏覽器定位權限。");
-      if (state.watchId !== null) {
-        navigator.geolocation.clearWatch(state.watchId);
-        state.watchId = null;
-      }
-      els.trackButton.textContent = "開始即時導航";
-      releaseWakeLock();
+    (error) => {
+      stopTracking();
+      const message = error.code === 1
+        ? "定位權限未開啟，請到 Safari 網站設定允許精確定位。"
+        : "暫時無法取得 GPS，請確認網路與定位服務後再試。";
+      els.locationStatus.textContent = message;
+      if (!automatic) alert(message);
     },
     { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
   );
@@ -956,6 +967,14 @@ function toggleTracking() {
   requestWakeLock();
   els.trackButton.textContent = "停止即時導航";
   renderProgress();
+}
+
+function toggleTracking() {
+  if (state.watchId !== null) {
+    stopTracking();
+  } else {
+    startTracking(false);
+  }
 }
 
 function simulateAtWanfang() {
@@ -1031,3 +1050,4 @@ renderAll();
 renderCollection();
 setCardCollapsed(window.matchMedia("(max-width: 620px)").matches);
 initSupabaseSync();
+startTracking(true);
