@@ -98,6 +98,54 @@ const quests = [
     radius: 50,
     reward: "準備完成",
     description: "確認健保卡、藥袋、量測紀錄與檢查注意事項。"
+  },
+  {
+    id: "tmu-campus-sprout",
+    title: "北醫校園芽芽",
+    type: "北醫測試任務",
+    kind: "park",
+    icon: "芽",
+    lat: 25.02662,
+    lng: 121.56271,
+    radius: 90,
+    reward: "校園芽怪",
+    description: "走近臺北醫學大學校園中心，測試即時定位與怪物收服。"
+  },
+  {
+    id: "tmu-hospital-helper",
+    title: "附醫守護怪",
+    type: "北醫測試任務",
+    kind: "hospital",
+    icon: "護",
+    lat: 25.02686,
+    lng: 121.56234,
+    radius: 90,
+    reward: "守護夥伴",
+    description: "靠近北醫附設醫院一側，完成測試後收服守護怪。"
+  },
+  {
+    id: "tmu-wuxing-runner",
+    title: "吳興疾走怪",
+    type: "北醫測試任務",
+    kind: "metro",
+    icon: "走",
+    lat: 25.02627,
+    lng: 121.56225,
+    radius: 90,
+    reward: "疾走夥伴",
+    description: "沿吳興街方向走動，觀察人物與怪物隊伍是否平滑跟隨。"
+  },
+  {
+    id: "tmu-nutrition-buddy",
+    title: "北醫餐盤怪",
+    type: "北醫測試任務",
+    kind: "community",
+    icon: "餐",
+    lat: 25.02632,
+    lng: 121.56312,
+    radius: 90,
+    reward: "營養夥伴",
+    description: "走到校園東側附近，完成健康餐盤測試並收服餐盤怪。"
   }
 ];
 
@@ -177,6 +225,7 @@ const els = {
   stepCount: document.querySelector("#stepCount"),
   distanceCount: document.querySelector("#distanceCount"),
   syncStatus: document.querySelector("#syncStatus"),
+  totalQuestCount: document.querySelector("#totalQuestCount"),
   trackButton: document.querySelector("#trackButton"),
   teamButton: document.querySelector("#teamButton"),
   teamPanel: document.querySelector("#teamPanel"),
@@ -305,6 +354,8 @@ function renderQuestCard() {
 
 function renderProgress() {
   els.completedCount.textContent = state.completed.size;
+  els.totalQuestCount.textContent = `/ ${quests.length} 完成`;
+  els.progressMeter.max = quests.length;
   els.progressMeter.value = state.completed.size;
   els.stepCount.textContent = `${Math.round(state.walkedMeters / 0.75)} 步`;
   els.distanceCount.textContent = `${Math.round(state.walkedMeters)} m`;
@@ -767,6 +818,13 @@ function updateUserPosition(coords, accuracy, timestamp = Date.now()) {
   state.lastPosition = coords;
   state.lastPositionTimestamp = timestamp;
   state.lastAccuracy = accuracy;
+
+  const selectedQuest = quests.find((quest) => quest.id === state.selectedId);
+  const closestQuest = nearestQuest();
+  if (selectedQuest && closestQuest && closestQuest.distance <= 250 &&
+      distanceMeters(coords, selectedQuest) > 1000) {
+    state.selectedId = closestQuest.quest.id;
+  }
 
   if (previous && Number.isFinite(accuracy) && accuracy <= 80) {
     if (delta >= 2 && delta <= 80) {
