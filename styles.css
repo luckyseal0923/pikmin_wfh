@@ -256,6 +256,7 @@ button:disabled {
 
 .icon-button {
   pointer-events: auto;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
   border: 1px solid var(--line);
@@ -264,6 +265,18 @@ button:disabled {
   color: var(--leaf-dark);
   cursor: pointer;
   box-shadow: var(--shadow);
+}
+
+.follow-button {
+  position: absolute;
+  right: 0;
+  top: 54px;
+}
+
+.follow-button.is-active {
+  background: var(--blue);
+  color: white;
+  border-color: white;
 }
 
 .key-panel {
@@ -604,7 +617,7 @@ meter {
     transition: max-height 160ms ease, padding 160ms ease, transform 160ms ease;
   }
 
-  .card-toggle {
+  .quest-card .card-toggle {
     display: flex;
     flex-direction: column;
     align-items: center;

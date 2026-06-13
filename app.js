@@ -116,6 +116,12 @@ const state = {
   syncTimer: null,
   markers: new Map(),
   userMarker: null,
+  displayedPosition: null,
+  markerAnimationFrame: null,
+  heading: 0,
+  speedMetersPerSecond: 0,
+  followMode: true,
+  wakeLock: null,
   accuracyCircle: null,
   userPath: null,
   userTrail: [],
@@ -133,11 +139,13 @@ const els = {
   mapError: document.querySelector("#mapError"),
   cardToggle: document.querySelector("#cardToggle"),
   cardToggleText: document.querySelector("#cardToggleText"),
+  followButton: document.querySelector("#followButton"),
   locateButton: document.querySelector("#locateButton"),
   locationStatus: document.querySelector("#locationStatus"),
   map: document.querySelector("#map"),
   mockMap: document.querySelector("#mockMap"),
   nearestQuest: document.querySelector("#nearestQuest"),
+  navigationStatus: document.querySelector("#navigationStatus"),
   progressMeter: document.querySelector("#progressMeter"),
   questDescription: document.querySelector("#questDescription"),
   questBody: document.querySelector("#questBody"),
@@ -203,6 +211,12 @@ function renderProgress() {
   const nearest = nearestQuest();
   els.nearestQuest.textContent = nearest ? `最近：${nearest.quest.title} ${Math.round(nearest.distance)}m` : "尚未定位";
   els.syncStatus.textContent = state.syncStatus;
+  if (state.watchId === null) {
+    els.navigationStatus.textContent = "尚未導航";
+  } else {
+    const speedKmh = Math.max(0, state.speedMetersPerSecond * 3.6);
+    els.navigationStatus.textContent = `${state.followMode ? "跟隨中" : "自由查看"} · ${speedKmh.toFixed(1)} km/h`;
+  }
 }
 
 function renderAll() {
@@ -390,9 +404,10 @@ function markerIcon(quest) {
   };
 }
 
-function userMarkerIcon() {
+function userMarkerIcon(heading = 0) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="76" height="76" viewBox="0 0 76 76">
+      <g transform="rotate(${Number.isFinite(heading) ? heading : 0} 38 38)">
       <ellipse cx="38" cy="68" rx="18" ry="5" fill="#26312b" opacity=".18"/>
       <path d="M38 10c-6 0-11 4-14 10" fill="none" stroke="#2f4b42" stroke-width="5" stroke-linecap="round"/>
       <circle cx="24" cy="20" r="5" fill="#f6cf57" stroke="#fff" stroke-width="2"/>
@@ -404,6 +419,8 @@ function userMarkerIcon() {
       <path d="M36 51c4 3 9 3 13 0" fill="none" stroke="#26312b" stroke-width="3.5" stroke-linecap="round"/>
       <path d="M21 59c-6 3-9 7-11 12" fill="none" stroke="#2f7bb2" stroke-width="5" stroke-linecap="round"/>
       <path d="M55 59c6 3 9 7 11 12" fill="none" stroke="#2f7bb2" stroke-width="5" stroke-linecap="round"/>
+      <path d="M38 2l-7 12h14z" fill="#f4b84f" stroke="#fff" stroke-width="2"/>
+      </g>
     </svg>
   `;
   return {
@@ -440,6 +457,8 @@ function initGoogleMap() {
     ]
   });
 
+  state.map.addListener("dragstart", () => setFollowMode(false));
+
   quests.forEach((quest) => {
     const marker = new google.maps.Marker({
       map: state.map,
@@ -461,6 +480,57 @@ function initGoogleMap() {
       fillOpacity: 0.08
     });
   });
+}
+
+function setFollowMode(enabled) {
+  state.followMode = enabled;
+  els.followButton.classList.toggle("is-active", enabled);
+  els.followButton.setAttribute("aria-pressed", String(enabled));
+  els.followButton.title = enabled ? "正在鎖定跟隨位置" : "點擊恢復跟隨位置";
+  if (enabled && state.lastPosition && state.map) {
+    state.map.panTo(state.lastPosition);
+    state.map.setZoom(Math.max(state.map.getZoom(), 18));
+  }
+  renderProgress();
+}
+
+function animateUserMarker(target, heading) {
+  if (!state.userMarker) return;
+  const start = state.displayedPosition || target;
+  const startedAt = performance.now();
+  const duration = 700;
+  if (state.markerAnimationFrame) cancelAnimationFrame(state.markerAnimationFrame);
+
+  const frame = (now) => {
+    const rawProgress = Math.min(1, (now - startedAt) / duration);
+    const progress = 1 - Math.pow(1 - rawProgress, 3);
+    const current = {
+      lat: start.lat + (target.lat - start.lat) * progress,
+      lng: start.lng + (target.lng - start.lng) * progress
+    };
+    state.displayedPosition = current;
+    state.userMarker.setPosition(current);
+    if (state.followMode && state.map) state.map.panTo(current);
+    if (rawProgress < 1) state.markerAnimationFrame = requestAnimationFrame(frame);
+  };
+
+  state.userMarker.setIcon(userMarkerIcon(heading));
+  state.markerAnimationFrame = requestAnimationFrame(frame);
+}
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    state.wakeLock = await navigator.wakeLock.request("screen");
+  } catch (_) {
+    state.wakeLock = null;
+  }
+}
+
+async function releaseWakeLock() {
+  if (!state.wakeLock) return;
+  await state.wakeLock.release().catch(() => {});
+  state.wakeLock = null;
 }
 
 function showMapStatus(message, isError = false) {
@@ -499,18 +569,16 @@ function updateUserPosition(coords, accuracy) {
     return;
   }
 
-  state.map.panTo(coords);
-  state.map.setZoom(Math.max(state.map.getZoom(), 17));
+  if (state.followMode) state.map.setZoom(Math.max(state.map.getZoom(), 18));
   if (!state.userMarker) {
     state.userMarker = new google.maps.Marker({
       map: state.map,
       position: coords,
-      icon: userMarkerIcon(),
+      icon: userMarkerIcon(state.heading),
       title: "目前位置"
     });
-  } else {
-    state.userMarker.setPosition(coords);
   }
+  animateUserMarker(coords, state.heading);
 
   state.userTrail.push(coords);
   if (state.userTrail.length > 120) state.userTrail.shift();
@@ -621,6 +689,7 @@ function locateUser() {
         lng: position.coords.longitude
       };
       updateUserPosition(coords, position.coords.accuracy);
+      setFollowMode(true);
     },
     () => alert("無法取得定位，請確認瀏覽器定位權限。"),
     { enableHighAccuracy: true, timeout: 8000 }
@@ -635,11 +704,19 @@ function toggleTracking() {
   if (state.watchId !== null) {
     navigator.geolocation.clearWatch(state.watchId);
     state.watchId = null;
-    els.trackButton.textContent = "持續追蹤";
+    els.trackButton.textContent = "開始即時導航";
+    releaseWakeLock();
+    renderProgress();
     return;
   }
   state.watchId = navigator.geolocation.watchPosition(
     (position) => {
+      if (Number.isFinite(position.coords.heading) && position.coords.heading >= 0) {
+        state.heading = position.coords.heading;
+      }
+      state.speedMetersPerSecond = Number.isFinite(position.coords.speed) && position.coords.speed > 0
+        ? position.coords.speed
+        : 0;
       updateUserPosition(
         { lat: position.coords.latitude, lng: position.coords.longitude },
         position.coords.accuracy
@@ -651,11 +728,15 @@ function toggleTracking() {
         navigator.geolocation.clearWatch(state.watchId);
         state.watchId = null;
       }
-      els.trackButton.textContent = "持續追蹤";
+      els.trackButton.textContent = "開始即時導航";
+      releaseWakeLock();
     },
     { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
   );
-  els.trackButton.textContent = "停止追蹤";
+  setFollowMode(true);
+  requestWakeLock();
+  els.trackButton.textContent = "停止即時導航";
+  renderProgress();
 }
 
 function simulateAtWanfang() {
@@ -682,10 +763,17 @@ els.completeButton.addEventListener("click", () => {
 });
 
 els.locateButton.addEventListener("click", locateUser);
+els.followButton.addEventListener("click", () => setFollowMode(true));
 els.trackButton.addEventListener("click", toggleTracking);
 els.simulateButton.addEventListener("click", simulateAtWanfang);
 els.cardToggle.addEventListener("click", () => {
   setCardCollapsed(!els.questCard.classList.contains("is-collapsed"));
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.watchId !== null && !state.wakeLock) {
+    requestWakeLock();
+  }
 });
 
 const storedKey = localStorage.getItem("googleMapsApiKey");

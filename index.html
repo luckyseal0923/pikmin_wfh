@@ -38,11 +38,13 @@
               <span id="distanceCount">0 m</span>
               <span id="nearestQuest">尚未定位</span>
               <span id="syncStatus">本機保存</span>
+              <span id="navigationStatus">尚未導航</span>
             </div>
           </div>
           <button id="locateButton" class="icon-button" type="button" title="定位到目前位置" aria-label="定位到目前位置">
             ◎
           </button>
+          <button id="followButton" class="icon-button follow-button is-active" type="button" title="鎖定跟隨位置" aria-label="鎖定跟隨位置" aria-pressed="true">◉</button>
         </div>
 
         <form id="keyForm" class="key-panel">
@@ -70,7 +72,7 @@
               <span id="questDistance">距離未知</span>
             </div>
             <div class="quest-actions">
-              <button id="trackButton" type="button">持續追蹤</button>
+              <button id="trackButton" type="button">開始即時導航</button>
               <button id="simulateButton" type="button">模擬在萬芳</button>
             </div>
             <button id="completeButton" type="button">完成任務</button>
@@ -99,6 +101,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260610-5"></script>
-    <script src="app.js?v=20260610-5"></script>
+    <script src="app.js?v=20260613-1"></script>
   </body>
 </html>
