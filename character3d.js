@@ -2,10 +2,29 @@
   const THREE_URL = "https://esm.sh/three@0.169.0";
   const LOADER_URL = "https://esm.sh/three@0.169.0/examples/jsm/loaders/GLTFLoader.js";
   const MODEL_URL = new URL("assets/character/nurse-walking.glb", window.location.href).href;
+  const CHARACTER_WIDTH = 76;
+  const CHARACTER_HEIGHT = 98;
+
+  const googleMapsReady = new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    const check = () => {
+      if (window.google?.maps?.OverlayView) {
+        resolve();
+        return;
+      }
+      if (Date.now() - startedAt > 15000) {
+        reject(new Error("Google Maps did not finish loading in time."));
+        return;
+      }
+      window.setTimeout(check, 50);
+    };
+    check();
+  });
 
   window.WANFANG_3D_READY = Promise.all([
     import(THREE_URL),
-    import(LOADER_URL)
+    import(LOADER_URL),
+    googleMapsReady
   ]).then(([THREE, loaderModule]) => {
     const { GLTFLoader } = loaderModule;
 
@@ -35,27 +54,52 @@
         this.container.className = "player-3d-overlay";
         Object.assign(this.container.style, {
           position: "absolute",
-          width: "112px",
-          height: "132px",
+          width: `${CHARACTER_WIDTH}px`,
+          height: `${CHARACTER_HEIGHT}px`,
           pointerEvents: "none",
-          transform: "translate(-56px, -116px)",
+          transform: `translate(-${CHARACTER_WIDTH / 2}px, -${CHARACTER_HEIGHT - 4}px)`,
           overflow: "visible",
-          zIndex: "30"
+          zIndex: "1000000"
         });
-        this.getPanes().overlayLayer.appendChild(this.container);
+        this.getPanes().overlayMouseTarget.appendChild(this.container);
+
+        const groundShadow = document.createElement("div");
+        groundShadow.setAttribute("aria-hidden", "true");
+        Object.assign(groundShadow.style, {
+          position: "absolute",
+          left: "50%",
+          bottom: "1px",
+          width: "34px",
+          height: "10px",
+          borderRadius: "50%",
+          background: "rgba(31, 55, 48, 0.2)",
+          filter: "blur(1.5px)",
+          transform: "translateX(-50%)",
+          zIndex: "0"
+        });
+        this.container.appendChild(groundShadow);
 
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(26, 112 / 132, 0.01, 100);
+        this.camera = new THREE.PerspectiveCamera(
+          26,
+          CHARACTER_WIDTH / CHARACTER_HEIGHT,
+          0.01,
+          100
+        );
         this.camera.position.set(0, 1.25, 5.7);
         this.camera.lookAt(0, 1.1, 0);
 
         this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        this.renderer.setSize(112, 132, false);
+        this.renderer.setSize(CHARACTER_WIDTH, CHARACTER_HEIGHT, false);
         this.renderer.setClearColor(0x000000, 0);
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.15;
+        Object.assign(this.renderer.domElement.style, {
+          position: "relative",
+          zIndex: "1"
+        });
         this.container.appendChild(this.renderer.domElement);
 
         this.scene.add(new THREE.HemisphereLight(0xffffff, 0x63857b, 2.5));
