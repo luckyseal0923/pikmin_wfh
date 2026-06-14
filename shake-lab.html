@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#17342d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>晃動蓄能戰鬥實驗</title>
+    <link rel="stylesheet" href="shake-lab.css?v=20260614-1">
+  </head>
+  <body>
+    <main class="battle-lab">
+      <header class="lab-header">
+        <a class="back-link" href="./" aria-label="返回地圖">←</a>
+        <div>
+          <p>實驗功能</p>
+          <h1>晃動蓄能戰鬥</h1>
+        </div>
+        <span class="lab-tag">LAB</span>
+      </header>
+
+      <section class="battle-stage" aria-label="戰鬥區域">
+        <div class="enemy-panel">
+          <div class="enemy-meta">
+            <div>
+              <span>測試敵人</span>
+              <strong>疲勞核心</strong>
+            </div>
+            <output id="enemyHpText">100 / 100</output>
+          </div>
+          <div class="hp-track" aria-label="敵人生命值">
+            <div id="enemyHpFill" class="hp-fill"></div>
+          </div>
+        </div>
+
+        <div id="enemy" class="enemy" aria-hidden="true">
+          <div class="enemy-ring"></div>
+          <div class="enemy-body">
+            <i class="enemy-eye eye-left"></i>
+            <i class="enemy-eye eye-right"></i>
+            <i class="enemy-mouth"></i>
+          </div>
+          <span id="damageNumber" class="damage-number"></span>
+        </div>
+
+        <div class="impact-zone" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </div>
+
+        <section class="charger" aria-label="戰鬥能量">
+          <div class="charge-heading">
+            <div>
+              <span>戰鬥能量</span>
+              <strong id="energyText">0%</strong>
+            </div>
+            <output id="comboText">連續 0 次</output>
+          </div>
+          <div id="energyTrack" class="energy-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="energyFill" class="energy-fill"></div>
+            <div class="energy-marks" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <p id="sensorStatus" class="sensor-status">按下「開始感測」，再握緊手機上下晃動。</p>
+        </section>
+      </section>
+
+      <section class="lab-controls">
+        <button id="sensorButton" class="primary-button" type="button">開始動作感測</button>
+        <button id="attackButton" class="attack-button" type="button" disabled>能量未滿</button>
+        <button id="simulateButton" class="secondary-button" type="button">模擬晃動</button>
+        <div class="readout" aria-label="感測數值">
+          <span>晃動強度 <strong id="intensityText">0.0</strong></span>
+          <span>有效晃動 <strong id="shakeCountText">0</strong></span>
+          <span>攻擊次數 <strong id="attackCountText">0</strong></span>
+        </div>
+        <p class="safety-note">請握緊手機並在身前小幅晃動，避免甩動或碰撞周遭物品。</p>
+      </section>
+    </main>
+
+    <script src="shake-lab.js?v=20260614-1"></script>
+  </body>
+</html>
