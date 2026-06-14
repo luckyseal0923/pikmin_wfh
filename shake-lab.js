@@ -24,14 +24,18 @@ const state = {
   attacks: 0,
   lastMagnitude: null,
   lastShakeAt: 0,
+  motionArmed: true,
+  quietSince: 0,
   comboExpiresAt: 0,
   sensorActive: false,
   attackLocked: false
 };
 
-const SHAKE_THRESHOLD = 3.4;
-const SHAKE_COOLDOWN_MS = 135;
-const COMBO_WINDOW_MS = 850;
+const SHAKE_THRESHOLD = 7.2;
+const RESET_THRESHOLD = 2.2;
+const RESET_HOLD_MS = 140;
+const SHAKE_COOLDOWN_MS = 320;
+const COMBO_WINDOW_MS = 1200;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -64,6 +68,8 @@ function registerShake(intensity) {
   const now = performance.now();
   if (now - state.lastShakeAt < SHAKE_COOLDOWN_MS || state.attackLocked) return;
   state.lastShakeAt = now;
+  state.motionArmed = false;
+  state.quietSince = 0;
   state.combo = now <= state.comboExpiresAt ? state.combo + 1 : 1;
   state.comboExpiresAt = now + COMBO_WINDOW_MS;
   state.shakes += 1;
@@ -93,6 +99,19 @@ function readMotion(event) {
   const intensity = Math.abs(magnitude - state.lastMagnitude);
   state.lastMagnitude = state.lastMagnitude * 0.35 + magnitude * 0.65;
   els.intensityText.textContent = intensity.toFixed(1);
+  const now = performance.now();
+  if (!state.motionArmed) {
+    if (intensity <= RESET_THRESHOLD) {
+      if (!state.quietSince) state.quietSince = now;
+      if (now - state.quietSince >= RESET_HOLD_MS) {
+        state.motionArmed = true;
+        state.quietSince = 0;
+      }
+    } else {
+      state.quietSince = 0;
+    }
+    return;
+  }
   if (intensity >= SHAKE_THRESHOLD) registerShake(intensity);
 }
 
@@ -110,7 +129,7 @@ async function startSensor() {
     state.sensorActive = true;
     els.sensorButton.textContent = "動作感測中";
     els.sensorButton.disabled = true;
-    els.sensorStatus.textContent = "感測器已啟動，握緊手機並小幅上下晃動。";
+    els.sensorStatus.textContent = "感測器已啟動，請做明顯的大幅上下晃動；輕微手抖不會計入。";
   } catch (error) {
     els.sensorStatus.textContent = `${error.message} 仍可使用「模擬晃動」測試。`;
     els.sensorButton.textContent = "重新開啟感測";
@@ -143,12 +162,16 @@ function attack() {
 }
 
 els.sensorButton.addEventListener("click", startSensor);
-els.simulateButton.addEventListener("click", () => registerShake(5.5 + Math.random() * 3));
+els.simulateButton.addEventListener("click", () => {
+  state.motionArmed = true;
+  registerShake(9 + Math.random() * 3);
+});
 els.attackButton.addEventListener("click", attack);
 window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     event.preventDefault();
-    registerShake(6.5);
+    state.motionArmed = true;
+    registerShake(9.5);
   }
 });
 
