@@ -197,6 +197,8 @@ const state = {
   visualTrail: [],
   lastVisualTrailAt: 0,
   heading: 0,
+  cameraHeading: 0,
+  lastCameraUpdateAt: 0,
   speedMetersPerSecond: 0,
   followMode: true,
   wakeLock: null,
@@ -207,6 +209,13 @@ const state = {
   lastAccuracy: null,
   simulationIndex: 0,
   watchId: null
+};
+
+const FOLLOW_CAMERA = {
+  zoom: 18.5,
+  tilt: 55,
+  lookAheadMeters: 55,
+  updateIntervalMs: 80
 };
 
 const els = {
@@ -663,21 +672,15 @@ function initGoogleMap() {
   els.mockMap.style.display = "none";
   state.map = new google.maps.Map(els.map, {
     center: WANFANG,
-    zoom: 16,
+    zoom: 16.5,
+    tilt: 0,
+    heading: 0,
+    renderingType: google.maps.RenderingType.VECTOR,
+    isFractionalZoomEnabled: true,
+    tiltInteractionEnabled: true,
+    headingInteractionEnabled: true,
     disableDefaultUI: true,
-    clickableIcons: false,
-    styles: [
-      { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-      { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#b7d5e6" }] },
-      { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#dff1fb" }] },
-      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#d7edf8" }] },
-      { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#c9eadf" }] },
-      { featureType: "road", elementType: "geometry", stylers: [{ color: "#f7fbff" }] },
-      { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#c3dceb" }] },
-      { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#5f7583" }] },
-      { featureType: "transit", elementType: "geometry", stylers: [{ color: "#c4e3f5" }] },
-      { featureType: "water", elementType: "geometry", stylers: [{ color: "#a9d8f3" }] }
-    ]
+    clickableIcons: false
   });
 
   state.map.addListener("dragstart", () => setFollowMode(false));
@@ -713,14 +716,66 @@ function initGoogleMap() {
   }
 }
 
+function destinationPoint(origin, heading, distanceMeters) {
+  const earthRadius = 6371000;
+  const angularDistance = distanceMeters / earthRadius;
+  const bearing = heading * Math.PI / 180;
+  const latitude = origin.lat * Math.PI / 180;
+  const longitude = origin.lng * Math.PI / 180;
+  const destinationLatitude = Math.asin(
+    Math.sin(latitude) * Math.cos(angularDistance) +
+    Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing)
+  );
+  const destinationLongitude = longitude + Math.atan2(
+    Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
+    Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude)
+  );
+  return {
+    lat: destinationLatitude * 180 / Math.PI,
+    lng: destinationLongitude * 180 / Math.PI
+  };
+}
+
+function shortestHeadingDelta(from, to) {
+  return ((to - from + 540) % 360) - 180;
+}
+
+function updateFollowCamera(position, heading, force = false) {
+  if (!state.map || !state.followMode || !position) return;
+  const now = performance.now();
+  if (!force && now - state.lastCameraUpdateAt < FOLLOW_CAMERA.updateIntervalMs) return;
+  state.lastCameraUpdateAt = now;
+
+  const targetHeading = Number.isFinite(heading) ? heading : state.cameraHeading;
+  const headingDelta = shortestHeadingDelta(state.cameraHeading, targetHeading);
+  state.cameraHeading = (state.cameraHeading + headingDelta * (force ? 1 : 0.16) + 360) % 360;
+  const center = destinationPoint(position, state.cameraHeading, FOLLOW_CAMERA.lookAheadMeters);
+  state.map.moveCamera({
+    center,
+    zoom: FOLLOW_CAMERA.zoom,
+    tilt: FOLLOW_CAMERA.tilt,
+    heading: state.cameraHeading
+  });
+  els.map.dataset.cameraTilt = String(FOLLOW_CAMERA.tilt);
+  els.map.dataset.cameraHeading = state.cameraHeading.toFixed(1);
+  els.map.dataset.cameraZoom = String(FOLLOW_CAMERA.zoom);
+  els.map.dataset.actualTilt = String(state.map.getTilt?.() ?? "");
+  els.map.dataset.actualHeading = String(state.map.getHeading?.() ?? "");
+  els.map.dataset.actualZoom = String(state.map.getZoom?.() ?? "");
+}
+
+function characterScreenHeading(heading) {
+  const mapHeading = state.map?.getHeading?.() || 0;
+  return state.followMode ? 0 : shortestHeadingDelta(mapHeading, heading);
+}
+
 function setFollowMode(enabled) {
   state.followMode = enabled;
   els.followButton.classList.toggle("is-active", enabled);
   els.followButton.setAttribute("aria-pressed", String(enabled));
   els.followButton.title = enabled ? "正在鎖定跟隨位置" : "點擊恢復跟隨位置";
   if (enabled && state.lastPosition && state.map) {
-    state.map.panTo(state.lastPosition);
-    state.map.setZoom(Math.max(state.map.getZoom(), 18));
+    updateFollowCamera(state.lastPosition, state.heading, true);
   }
   renderProgress();
 }
@@ -747,12 +802,12 @@ function animateUserMarker(target, heading, duration = 1200) {
       state.lastVisualTrailAt = now;
     }
     updateFollowerPositions(current);
-    if (state.followMode && state.map) state.map.panTo(current);
+    updateFollowCamera(current, heading);
     if (rawProgress < 1) state.markerAnimationFrame = requestAnimationFrame(frame);
   };
 
   if (state.userMarker) state.userMarker.setIcon(userMarkerIcon(heading));
-  if (state.user3DCharacter) state.user3DCharacter.setHeading(heading);
+  if (state.user3DCharacter) state.user3DCharacter.setHeading(characterScreenHeading(heading));
   state.markerAnimationFrame = requestAnimationFrame(frame);
 }
 
@@ -764,7 +819,7 @@ async function ensure3DCharacter(position) {
     const character = characterApi.create(state.map, position);
     await character.ready;
     character.setPosition(state.displayedPosition || state.lastPosition || position);
-    character.setHeading(state.heading);
+    character.setHeading(characterScreenHeading(state.heading));
     state.user3DCharacter = character;
     if (state.userMarker) state.userMarker.setVisible(false);
   } catch (error) {
@@ -862,7 +917,7 @@ function updateUserPosition(coords, accuracy, timestamp = Date.now()) {
     return;
   }
 
-  if (state.followMode) state.map.setZoom(Math.max(state.map.getZoom(), 18));
+  if (state.followMode) updateFollowCamera(coords, state.heading, !state.userMarker);
   if (!state.userMarker) {
     state.userMarker = new google.maps.Marker({
       map: state.map,
